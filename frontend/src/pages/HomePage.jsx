@@ -1,15 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { HeroSearch } from '../components/HeroSearch';
 import { DestinationCard } from '../components/DestinationCard';
 import { PackageCard } from '../components/PackageCard';
 import { apiClient } from '../api/apiClient';
-import { Sparkles, Compass, ShieldCheck, Clock, ArrowRight, Award, Zap } from 'lucide-react';
+import {
+  Sparkles,
+  Compass,
+  ShieldCheck,
+  Clock,
+  ArrowRight,
+  Award,
+  Zap,
+  MapPin,
+  Package,
+  Layers
+} from 'lucide-react';
 
 export const HomePage = () => {
   const [destinations, setDestinations] = useState([]);
   const [featuredPackages, setFeaturedPackages] = useState([]);
   const [loading, setLoading] = useState(true);
+  const location = useLocation();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -29,10 +41,31 @@ export const HomePage = () => {
     fetchData();
   }, []);
 
+  // Handle smooth scroll when navigating to #section-id
+  useEffect(() => {
+    if (location.hash) {
+      const id = location.hash.replace('#', '');
+      const timer = setTimeout(() => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [location.hash]);
+
+  const scrollToSection = (id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <div>
       {/* 1. TRAVIVU HERO SECTION */}
-      <section className="travivu-hero">
+      <section className="travivu-hero" id="hero-section">
         <div className="travivu-hero-content">
           <h1 className="travivu-hero-title">
             Beginning of<br />Your Travel Journey
@@ -44,10 +77,42 @@ export const HomePage = () => {
 
         {/* Multi-Segment Pill Search Bar */}
         <HeroSearch />
+
+        {/* Mobile Quick-Jump Section Chips (visible on phones) */}
+        <div className="mobile-section-chips-bar">
+          <button
+            type="button"
+            onClick={() => scrollToSection('destinations-section')}
+            className="mobile-chip-btn"
+          >
+            <MapPin size={13} color="#0284c7" /> Destinations
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection('packages-section')}
+            className="mobile-chip-btn"
+          >
+            <Package size={13} color="#0284c7" /> Tours & Packages
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection('planner-section')}
+            className="mobile-chip-btn"
+          >
+            <Sparkles size={13} color="#f59e0b" /> Smart Planner
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection('why-us-section')}
+            className="mobile-chip-btn"
+          >
+            <ShieldCheck size={13} color="#10b981" /> Why Us
+          </button>
+        </div>
       </section>
 
-      {/* 2. TOP DESTINATIONS SECTION (Matches Travivu 5-card layout) */}
-      <section className="section-destinations">
+      {/* 2. TOP DESTINATIONS SECTION */}
+      <section className="section-destinations section-anchor" id="destinations-section">
         <div className="section-header-row">
           <div>
             <div className="section-tag">Top Destinations</div>
@@ -71,8 +136,8 @@ export const HomePage = () => {
         )}
       </section>
 
-      {/* 3. WHY CHOOSE US (Matches Travivu screenshot subtitle) */}
-      <section style={{ maxWidth: '1280px', margin: '70px auto', padding: '0 24px', textAlign: 'center' }}>
+      {/* 3. WHY CHOOSE US */}
+      <section className="section-anchor" id="why-us-section" style={{ maxWidth: '1280px', margin: '70px auto', padding: '0 24px', textAlign: 'center' }}>
         <div className="section-tag" style={{ margin: '0 auto 6px' }}>Why Choose Us</div>
         <h2 className="section-title" style={{ marginBottom: '40px' }}>Travel Services You Can Trust</h2>
 
@@ -116,7 +181,7 @@ export const HomePage = () => {
       </section>
 
       {/* 4. SMART TRAVEL PLANNER CALLOUT */}
-      <section style={{ maxWidth: '1280px', margin: '70px auto', padding: '0 24px' }}>
+      <section className="section-anchor" id="planner-section" style={{ maxWidth: '1280px', margin: '70px auto', padding: '0 24px' }}>
         <div style={{
           background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
           borderRadius: '28px', padding: '50px 40px', color: '#ffffff',
@@ -152,7 +217,7 @@ export const HomePage = () => {
       </section>
 
       {/* 5. FEATURED PACKAGES SECTION */}
-      <section style={{ maxWidth: '1280px', margin: '70px auto 40px', padding: '0 24px' }}>
+      <section className="section-anchor" id="packages-section" style={{ maxWidth: '1280px', margin: '70px auto 40px', padding: '0 24px' }}>
         <div className="section-header-row">
           <div>
             <div className="section-tag">Handcrafted Tours</div>
@@ -172,4 +237,3 @@ export const HomePage = () => {
     </div>
   );
 };
-
