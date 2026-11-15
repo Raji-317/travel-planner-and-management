@@ -41,12 +41,43 @@ public class DatabaseConfig {
             }
         }
 
-        // 2. Read environment variable -> properties file -> default
-        dbHost = getVal("DB_HOST", props.getProperty("db.host"), DEFAULT_HOST);
-        dbPort = getVal("DB_PORT", props.getProperty("db.port"), DEFAULT_PORT);
-        dbName = getVal("DB_NAME", props.getProperty("db.name"), DEFAULT_DB);
-        dbUser = getVal("DB_USER", props.getProperty("db.user"), DEFAULT_USER);
-        dbPassword = getVal("DB_PASSWORD", props.getProperty("db.password"), DEFAULT_PASSWORD);
+        // 2. Check for unified connection URL (Railway / Heroku / Render / Aiven)
+        String dbUrl = System.getenv("MYSQL_URL");
+        if (dbUrl == null || dbUrl.isEmpty()) dbUrl = System.getenv("MYSQL_PRIVATE_URL");
+        if (dbUrl == null || dbUrl.isEmpty()) dbUrl = System.getenv("MYSQL_PUBLIC_URL");
+        if (dbUrl == null || dbUrl.isEmpty()) dbUrl = System.getenv("DATABASE_URL");
+
+        if (dbUrl != null && !dbUrl.trim().isEmpty()) {
+            try {
+                String clean = dbUrl.trim();
+                if (clean.startsWith("mysql://")) {
+                    clean = "http://" + clean.substring(8);
+                }
+                java.net.URI uri = new java.net.URI(clean);
+                if (uri.getHost() != null) dbHost = uri.getHost();
+                if (uri.getPort() > 0) dbPort = String.valueOf(uri.getPort());
+                if (uri.getPath() != null && uri.getPath().length() > 1) {
+                    String p = uri.getPath().substring(1);
+                    int qIdx = p.indexOf("?");
+                    dbName = (qIdx > 0) ? p.substring(0, qIdx) : p;
+                }
+                if (uri.getUserInfo() != null) {
+                    String[] userParts = uri.getUserInfo().split(":", 2);
+                    dbUser = userParts[0];
+                    if (userParts.length > 1) dbPassword = userParts[1];
+                }
+                System.out.println("[DB-INIT] Detected cloud database URL. Host: " + dbHost + ", Port: " + dbPort + ", DB: " + dbName);
+            } catch (Exception e) {
+                System.err.println("[WARN] Could not parse DB URL (" + dbUrl + "): " + e.getMessage());
+            }
+        }
+
+        // 3. Fallback to individual environment variables -> properties file -> default
+        if (dbHost == null) dbHost = getValMulti(new String[]{"DB_HOST", "MYSQLHOST", "MYSQL_HOST"}, props.getProperty("db.host"), DEFAULT_HOST);
+        if (dbPort == null) dbPort = getValMulti(new String[]{"DB_PORT", "MYSQLPORT", "MYSQL_PORT"}, props.getProperty("db.port"), DEFAULT_PORT);
+        if (dbName == null) dbName = getValMulti(new String[]{"DB_NAME", "MYSQLDATABASE", "MYSQL_DATABASE"}, props.getProperty("db.name"), DEFAULT_DB);
+        if (dbUser == null) dbUser = getValMulti(new String[]{"DB_USER", "MYSQLUSER", "MYSQL_USER"}, props.getProperty("db.user"), DEFAULT_USER);
+        if (dbPassword == null) dbPassword = getValMulti(new String[]{"DB_PASSWORD", "MYSQLPASSWORD", "MYSQL_PASSWORD"}, props.getProperty("db.password"), DEFAULT_PASSWORD);
 
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
@@ -54,6 +85,15 @@ public class DatabaseConfig {
             System.err.println("[WARN] MySQL JDBC Driver not found in classpath. "
                     + "Please ensure mysql-connector-j.jar is in backend/lib/.");
         }
+    }
+
+    private static String getValMulti(String[] envKeys, String propVal, String defaultVal) {
+        for (String k : envKeys) {
+            String val = System.getenv(k);
+            if (val != null && !val.trim().isEmpty()) return val.trim();
+        }
+        if (propVal != null && !propVal.trim().isEmpty()) return propVal.trim();
+        return defaultVal;
     }
 
     private static String getVal(String envKey, String propVal, String defaultVal) {
