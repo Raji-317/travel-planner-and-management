@@ -67,6 +67,9 @@ public class Main {
         server.createContext("/api/operator/bookings", bookingController);
         server.createContext("/api/reviews", bookingController);
 
+        // Wishlist Endpoints: /api/wishlist
+        server.createContext("/api/wishlist", new com.travel.controller.WishlistController());
+
         // Smart Travel Planner Endpoints: /api/planner/generate, /api/planner/save, etc.
         server.createContext("/api/planner", new com.travel.controller.PlannerController());
 

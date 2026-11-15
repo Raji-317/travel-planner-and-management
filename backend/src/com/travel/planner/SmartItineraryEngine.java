@@ -53,21 +53,55 @@ public class SmartItineraryEngine {
         List<AttractionNode> allNodes = new ArrayList<>(graph.getAllNodes());
         List<AttractionNode> selectedNodes = new ArrayList<>();
 
-        // If user manually chose specific places, include them first
+        double baseLat = (destination.getLatitude() != null && destination.getLatitude() != 0.0)
+                ? destination.getLatitude()
+                : (!allNodes.isEmpty() ? allNodes.get(0).getLatitude() : 13.6288);
+        double baseLng = (destination.getLongitude() != null && destination.getLongitude() != 0.0)
+                ? destination.getLongitude()
+                : (!allNodes.isEmpty() ? allNodes.get(0).getLongitude() : 79.4192);
+
+        // If user manually chose or added specific places, guarantee every single chosen spot is included!
         if (selectedPlaceNames != null && !selectedPlaceNames.isEmpty()) {
             for (String userPick : selectedPlaceNames) {
+                if (userPick == null || userPick.trim().isEmpty()) continue;
+                String cleanPick = userPick.trim();
+                AttractionNode matched = null;
+
                 for (AttractionNode node : allNodes) {
-                    if (node.getName().toLowerCase().contains(userPick.toLowerCase()) ||
-                        userPick.toLowerCase().contains(node.getName().toLowerCase())) {
-                        if (!selectedNodes.contains(node)) {
-                            selectedNodes.add(node);
-                        }
+                    if (node.getName().equalsIgnoreCase(cleanPick) ||
+                        node.getName().toLowerCase().contains(cleanPick.toLowerCase()) ||
+                        cleanPick.toLowerCase().contains(node.getName().toLowerCase())) {
+                        matched = node;
+                        break;
                     }
+                }
+
+                if (matched != null) {
+                    if (!selectedNodes.contains(matched)) {
+                        selectedNodes.add(matched);
+                    }
+                } else {
+                    // This is a custom added spot (or newly added spot by the tourist)!
+                    // Dynamically create an AttractionNode so it is guaranteed to be in the itinerary!
+                    double offset = (selectedNodes.size() + 1) * 0.012;
+                    AttractionNode customNode = new AttractionNode(
+                            7500 + selectedNodes.size() + 1,
+                            cleanPick,
+                            "Must-Visit Attraction & Landmark",
+                            baseLat + offset,
+                            baseLng + offset,
+                            75,    // duration 75 mins
+                            0.0,   // entry ticket 0
+                            5.0    // high priority popularity
+                    );
+                    graph.addNode(customNode);
+                    allNodes.add(customNode);
+                    selectedNodes.add(customNode);
                 }
             }
         }
 
-        // Fill remaining slots based on interest scores
+        // Fill remaining slots based on interest scores if user selected fewer places than needed
         allNodes.sort((a, b) -> {
             double scoreA = calculateAttractionScore(a, interests);
             double scoreB = calculateAttractionScore(b, interests);

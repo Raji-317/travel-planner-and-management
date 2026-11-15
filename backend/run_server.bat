@@ -7,6 +7,12 @@ echo    TRAVEL PLANNER BACKEND SERVER (Pure Java SE + Port 8080)
 echo ======================================================================
 echo.
 
+:: Automatically free port 8080 if a previous instance is still running
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8080 ^| findstr LISTENING') do (
+    echo [INFO] Port 8080 is currently held by PID %%a. Closing previous process...
+    taskkill /f /pid %%a >nul 2>&1
+)
+
 if not exist out mkdir out
 
 echo [1/2] Compiling backend sources...

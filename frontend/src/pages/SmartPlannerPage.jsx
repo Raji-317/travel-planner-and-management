@@ -173,9 +173,10 @@ export const SmartPlannerPage = () => {
         {
           name: newName,
           category: 'Custom Must-Visit Spot',
-          durationMin: 60,
+          durationMin: 75,
           ticketPrice: 0,
           estimatedCost: 100.0,
+          isCustom: true,
         },
       ];
     });
@@ -431,8 +432,15 @@ export const SmartPlannerPage = () => {
                       style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#0284c7' }}
                     />
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#0f172a' }}>{p.name}</div>
-                      <div style={{ fontSize: '11px', color: '#64748b', display: 'flex', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#0f172a' }}>{p.name}</span>
+                        {p.isCustom && (
+                          <span style={{ fontSize: '10px', background: '#dcfce7', color: '#166534', padding: '2px 6px', borderRadius: '6px', fontWeight: 800 }}>
+                            ★ Added Spot
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#64748b', display: 'flex', gap: '10px', marginTop: '2px' }}>
                         <span>{p.category}</span>
                         <span>⏱ ~{p.durationMin}m</span>
                         <span>🎟 {p.ticketPrice > 0 ? `₹${p.ticketPrice}` : 'Free'}</span>

@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { apiClient } from '../api/apiClient';
-import { MapPin, Calendar, DollarSign, Star, Clock, Compass, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Star, Clock, Compass, ArrowRight, CheckCircle2, Heart } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { isDestinationWishlisted, toggleDestinationWishlist } from '../utils/wishlistHelper';
 
 export const DestinationDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [destination, setDestination] = useState(null);
   const [attractions, setAttractions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isSaved, setIsSaved] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -19,6 +23,9 @@ export const DestinationDetailPage = () => {
         ]);
         setDestination(dest);
         setAttractions(atts || []);
+        if (dest?.destinationId) {
+          setIsSaved(isDestinationWishlisted(dest.destinationId));
+        }
       } catch (err) {
         console.error('Error fetching destination details:', err);
       } finally {
@@ -26,7 +33,19 @@ export const DestinationDetailPage = () => {
       }
     };
     fetchData();
+
+    const handleWishlistChange = () => {
+      if (id) setIsSaved(isDestinationWishlisted(Number(id)));
+    };
+    window.addEventListener('wishlist-changed', handleWishlistChange);
+    return () => window.removeEventListener('wishlist-changed', handleWishlistChange);
   }, [id]);
+
+  const handleToggleWishlist = async () => {
+    if (!destination) return;
+    const nextSaved = await toggleDestinationWishlist(destination, user);
+    setIsSaved(nextSaved);
+  };
 
   if (loading) {
     return <div style={{ textAlign: 'center', padding: '80px', color: '#64748b' }}>Loading destination details...</div>;
@@ -46,20 +65,47 @@ export const DestinationDetailPage = () => {
         display: 'flex', alignItems: 'flex-end', padding: '40px 24px', color: '#ffffff'
       }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto', width: '100%' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(4px)', padding: '4px 12px', borderRadius: '9999px', fontSize: '13px', fontWeight: 600, marginBottom: '12px' }}>
-            <MapPin size={14} /> {destination.state}, {destination.country}
-          </div>
-          <h1 style={{ fontSize: '44px', fontWeight: 800, marginBottom: '12px' }}>{destination.name}</h1>
-          <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', fontSize: '14px', fontWeight: 600 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Star size={16} fill="#facc15" color="#facc15" /> {destination.popularityScore?.toFixed(1)} ({destination.totalReviews} reviews)
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '16px' }}>
+            <div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(4px)', padding: '4px 12px', borderRadius: '9999px', fontSize: '13px', fontWeight: 600, marginBottom: '12px' }}>
+                <MapPin size={14} /> {destination.state}, {destination.country}
+              </div>
+              <h1 style={{ fontSize: '44px', fontWeight: 800, marginBottom: '12px' }}>{destination.name}</h1>
+              <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', fontSize: '14px', fontWeight: 600 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Star size={16} fill="#facc15" color="#facc15" /> {destination.popularityScore?.toFixed(1)} ({destination.totalReviews} reviews)
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Calendar size={16} color="#38bdf8" /> Best Season: {destination.bestSeason}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <DollarSign size={16} color="#4ade80" /> Daily Est: ₹{destination.dailyBudgetEstimated?.toLocaleString()} / person
+                </div>
+              </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Calendar size={16} color="#38bdf8" /> Best Season: {destination.bestSeason}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <DollarSign size={16} color="#4ade80" /> Daily Est: ₹{destination.dailyBudgetEstimated?.toLocaleString()} / person
-            </div>
+
+            <button
+              onClick={handleToggleWishlist}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 18px',
+                borderRadius: '9999px',
+                background: isSaved ? '#fee2e2' : 'rgba(255, 255, 255, 0.25)',
+                color: isSaved ? '#ef4444' : '#ffffff',
+                border: isSaved ? '1px solid #f87171' : '1px solid rgba(255, 255, 255, 0.4)',
+                backdropFilter: 'blur(6px)',
+                fontWeight: 700,
+                fontSize: '14px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                marginBottom: '8px'
+              }}
+            >
+              <Heart size={18} fill={isSaved ? '#ef4444' : 'none'} color={isSaved ? '#ef4444' : '#ffffff'} />
+              {isSaved ? 'In Your Wishlist' : 'Add to Wishlist'}
+            </button>
           </div>
         </div>
       </div>
@@ -127,9 +173,32 @@ export const DestinationDetailPage = () => {
             <button
               onClick={() => navigate(`/planner?destinationId=${destination.destinationId}&destination=${encodeURIComponent(destination.name)}`)}
               className="btn-primary-orange"
-              style={{ width: '100%', justifyContent: 'center', padding: '14px', fontSize: '15px' }}
+              style={{ width: '100%', justifyContent: 'center', padding: '14px', fontSize: '15px', marginBottom: '12px' }}
             >
               Generate Smart Itinerary <ArrowRight size={16} />
+            </button>
+
+            <button
+              onClick={handleToggleWishlist}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                padding: '12px',
+                borderRadius: '12px',
+                border: isSaved ? '1px solid #fca5a5' : '1px solid #cbd5e1',
+                background: isSaved ? '#fff1f2' : '#f8fafc',
+                color: isSaved ? '#e11d48' : '#475569',
+                fontWeight: 700,
+                fontSize: '14px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <Heart size={16} fill={isSaved ? '#e11d48' : 'none'} color={isSaved ? '#e11d48' : '#475569'} />
+              {isSaved ? 'Saved in Wishlist' : 'Save to Wishlist'}
             </button>
           </div>
         </div>

@@ -62,6 +62,22 @@ export function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/trips"
+                element={
+                  <ProtectedRoute allowedRoles={['TOURIST', 'ADMIN']}>
+                    <MyBookingsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/wishlist"
+                element={
+                  <ProtectedRoute allowedRoles={['TOURIST', 'ADMIN']}>
+                    <MyBookingsPage />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Operator Protected Routes */}
               <Route

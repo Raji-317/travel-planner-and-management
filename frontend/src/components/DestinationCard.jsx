@@ -1,10 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Heart, Star, Sparkles } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { isDestinationWishlisted, toggleDestinationWishlist } from '../utils/wishlistHelper';
 
 export const DestinationCard = ({ destination }) => {
   const navigate = useNavigate();
-  const [isSaved, setIsSaved] = useState(false);
+  const { user } = useAuth();
+  const [isSaved, setIsSaved] = useState(() => isDestinationWishlisted(destination?.destinationId));
+
+  useEffect(() => {
+    setIsSaved(isDestinationWishlisted(destination?.destinationId));
+
+    const handleWishlistChange = () => {
+      setIsSaved(isDestinationWishlisted(destination?.destinationId));
+    };
+
+    window.addEventListener('wishlist-changed', handleWishlistChange);
+    return () => window.removeEventListener('wishlist-changed', handleWishlistChange);
+  }, [destination?.destinationId]);
 
   const formatReviewCount = (count) => {
     if (!count) return '1.2k';
@@ -15,6 +29,13 @@ export const DestinationCard = ({ destination }) => {
     e.preventDefault();
     e.stopPropagation();
     navigate(`/planner?destinationId=${destination.destinationId}&destination=${encodeURIComponent(destination.name)}`);
+  };
+
+  const handleToggleHeart = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const nextSaved = await toggleDestinationWishlist(destination, user);
+    setIsSaved(nextSaved);
   };
 
   return (
@@ -43,8 +64,11 @@ export const DestinationCard = ({ destination }) => {
             alignItems: 'center',
             gap: '4px',
             cursor: 'pointer',
-            backdropFilter: 'blur(4px)'
+            backdropFilter: 'blur(4px)',
+            transition: 'transform 0.15s ease'
           }}
+          onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
+          onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
         >
           <Sparkles size={12} color="#38bdf8" /> Plan
         </button>
@@ -52,14 +76,27 @@ export const DestinationCard = ({ destination }) => {
         <button
           type="button"
           className={`dest-card-heart ${isSaved ? 'active' : ''}`}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setIsSaved(!isSaved);
+          onClick={handleToggleHeart}
+          title={isSaved ? 'Remove from Wishlist' : 'Add to Wishlist'}
+          style={{
+            background: isSaved ? '#fee2e2' : 'rgba(255, 255, 255, 0.9)',
+            border: 'none',
+            borderRadius: '50%',
+            width: '32px',
+            height: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+            transition: 'all 0.2s ease'
           }}
-          title="Save Destination"
         >
-          <Heart size={16} fill={isSaved ? '#ef4444' : 'none'} />
+          <Heart
+            size={16}
+            color={isSaved ? '#ef4444' : '#64748b'}
+            fill={isSaved ? '#ef4444' : 'none'}
+          />
         </button>
       </div>
 
@@ -78,4 +115,3 @@ export const DestinationCard = ({ destination }) => {
     </Link>
   );
 };
-

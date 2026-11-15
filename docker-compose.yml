@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: travel_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: travel_planner_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./database/sample_data.sql:/docker-entrypoint-initdb.d/02-sample.sql:ro
+      - ./database/update_india_data.sql:/docker-entrypoint-initdb.d/03-india.sql:ro
+    restart: always
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: travel_backend
+    environment:
+      PORT: 8080
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: travel_planner_db
+      DB_USER: root
+      DB_PASSWORD: root
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    restart: always
+
+volumes:
+  mysql_data:

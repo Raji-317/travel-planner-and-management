@@ -102,7 +102,10 @@ public class PackageRepository {
             ps.setInt(1, operatorId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    list.add(mapRowToPackage(rs));
+                    Package p = mapRowToPackage(rs);
+                    p.setItineraryDays(findItineraryDaysByPackageId(conn, p.getPackageId()));
+                    p.setDepartures(findDeparturesByPackageId(conn, p.getPackageId()));
+                    list.add(p);
                 }
             }
         } catch (SQLException e) {
@@ -207,35 +210,147 @@ public class PackageRepository {
     }
 
     public boolean updatePackage(Package pkg) {
-        String sql = "UPDATE packages SET title = ?, description = ?, base_price_per_person = ?, "
-                + "max_travellers = ?, included_services = ?, excluded_services = ?, accommodation_details = ?, "
-                + "transportation_details = ?, image_url = ?, is_active = ? WHERE package_id = ? AND operator_id = ?";
+        String sql = "UPDATE packages SET title = ?, description = ?, destination_id = ?, duration_days = ?, "
+                + "duration_nights = ?, base_price_per_person = ?, max_travellers = ?, included_services = ?, "
+                + "excluded_services = ?, accommodation_details = ?, transportation_details = ?, image_url = ?, "
+                + "is_active = ? WHERE package_id = ? AND operator_id = ?";
 
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, pkg.getTitle());
-            ps.setString(2, pkg.getDescription());
-            ps.setDouble(3, pkg.getBasePricePerPerson());
-            ps.setInt(4, pkg.getMaxTravellers());
-            ps.setString(5, pkg.getIncludedServices());
-            ps.setString(6, pkg.getExcludedServices());
-            ps.setString(7, pkg.getAccommodationDetails());
-            ps.setString(8, pkg.getTransportationDetails());
-            ps.setString(9, pkg.getImageUrl());
-            ps.setBoolean(10, pkg.isActive());
-            ps.setInt(11, pkg.getPackageId());
-            ps.setInt(12, pkg.getOperatorId());
-            return ps.executeUpdate() > 0;
+        Connection conn = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, pkg.getTitle());
+                ps.setString(2, pkg.getDescription());
+                ps.setInt(3, pkg.getDestinationId());
+                ps.setInt(4, pkg.getDurationDays());
+                ps.setInt(5, pkg.getDurationNights());
+                ps.setDouble(6, pkg.getBasePricePerPerson());
+                ps.setInt(7, pkg.getMaxTravellers());
+                ps.setString(8, pkg.getIncludedServices());
+                ps.setString(9, pkg.getExcludedServices());
+                ps.setString(10, pkg.getAccommodationDetails());
+                ps.setString(11, pkg.getTransportationDetails());
+                ps.setString(12, pkg.getImageUrl());
+                ps.setBoolean(13, pkg.isActive());
+                ps.setInt(14, pkg.getPackageId());
+                ps.setInt(15, pkg.getOperatorId());
+                int updatedRows = ps.executeUpdate();
+                if (updatedRows == 0) {
+                    conn.rollback();
+                    return false;
+                }
+            }
+
+            // Replace itinerary days if provided
+            if (pkg.getItineraryDays() != null) {
+                try (PreparedStatement delPs = conn.prepareStatement("DELETE FROM package_itinerary_days WHERE package_id = ?")) {
+                    delPs.setInt(1, pkg.getPackageId());
+                    delPs.executeUpdate();
+                }
+
+                if (!pkg.getItineraryDays().isEmpty()) {
+                    String daySql = "INSERT INTO package_itinerary_days (package_id, day_number, title, description, "
+                            + "morning_activity, afternoon_activity, evening_activity, meals_included) "
+                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                    try (PreparedStatement psDay = conn.prepareStatement(daySql)) {
+                        for (PackageItineraryDay day : pkg.getItineraryDays()) {
+                            psDay.setInt(1, pkg.getPackageId());
+                            psDay.setInt(2, day.getDayNumber());
+                            psDay.setString(3, day.getTitle() != null ? day.getTitle() : ("Day " + day.getDayNumber()));
+                            psDay.setString(4, day.getDescription() != null ? day.getDescription() : "");
+                            psDay.setString(5, day.getMorningActivity());
+                            psDay.setString(6, day.getAfternoonActivity());
+                            psDay.setString(7, day.getEveningActivity());
+                            psDay.setString(8, day.getMealsIncluded());
+                            psDay.addBatch();
+                        }
+                        psDay.executeBatch();
+                    }
+                }
+            }
+
+            // Replace departures if provided
+            if (pkg.getDepartures() != null && !pkg.getDepartures().isEmpty()) {
+                try (PreparedStatement delDep = conn.prepareStatement("DELETE FROM package_departures WHERE package_id = ? AND status = 'OPEN'")) {
+                    delDep.setInt(1, pkg.getPackageId());
+                    delDep.executeUpdate();
+                }
+                String depSql = "INSERT INTO package_departures (package_id, start_date, end_date, total_slots, available_slots, status) "
+                        + "VALUES (?, ?, ?, ?, ?, 'OPEN')";
+                try (PreparedStatement psDep = conn.prepareStatement(depSql)) {
+                    for (PackageDeparture dep : pkg.getDepartures()) {
+                        psDep.setInt(1, pkg.getPackageId());
+                        psDep.setDate(2, Date.valueOf(dep.getStartDate()));
+                        psDep.setDate(3, Date.valueOf(dep.getEndDate()));
+                        int slots = dep.getTotalSlots() > 0 ? dep.getTotalSlots() : pkg.getMaxTravellers();
+                        psDep.setInt(4, slots);
+                        psDep.setInt(5, slots);
+                        psDep.addBatch();
+                    }
+                    psDep.executeBatch();
+                }
+            }
+
+            conn.commit();
+            return true;
         } catch (SQLException e) {
             System.err.println("[REPO-ERR] updatePackage: " + e.getMessage());
+            if (conn != null) {
+                try { conn.rollback(); } catch (SQLException ignored) {}
+            }
             return false;
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
+            }
         }
     }
 
     public boolean deletePackage(int packageId, int operatorId) {
-        String sql = "UPDATE packages SET is_active = FALSE WHERE package_id = ? AND operator_id = ?";
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        Connection conn = null;
+        try {
+            conn = DatabaseConfig.getConnection();
+            conn.setAutoCommit(false);
+
+            // Clean up dependent child records if possible
+            try (PreparedStatement psDays = conn.prepareStatement("DELETE FROM package_itinerary_days WHERE package_id = ?")) {
+                psDays.setInt(1, packageId);
+                psDays.executeUpdate();
+            }
+
+            try (PreparedStatement psDeps = conn.prepareStatement("DELETE FROM package_departures WHERE package_id = ?")) {
+                psDeps.setInt(1, packageId);
+                psDeps.executeUpdate();
+            }
+
+            try (PreparedStatement psPkg = conn.prepareStatement("DELETE FROM packages WHERE package_id = ? AND operator_id = ?")) {
+                psPkg.setInt(1, packageId);
+                psPkg.setInt(2, operatorId);
+                int rows = psPkg.executeUpdate();
+                if (rows > 0) {
+                    conn.commit();
+                    return true;
+                }
+            }
+
+            conn.rollback();
+        } catch (SQLException e) {
+            System.err.println("[REPO-WARN] deletePackage physical delete, falling back to soft delete: " + e.getMessage());
+            if (conn != null) {
+                try { conn.rollback(); } catch (SQLException ignored) {}
+            }
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
+            }
+        }
+
+        // Soft delete fallback in case there are bookings attached
+        String softSql = "UPDATE packages SET is_active = FALSE WHERE package_id = ? AND operator_id = ?";
+        try (Connection c2 = DatabaseConfig.getConnection();
+             PreparedStatement ps = c2.prepareStatement(softSql)) {
             ps.setInt(1, packageId);
             ps.setInt(2, operatorId);
             return ps.executeUpdate() > 0;

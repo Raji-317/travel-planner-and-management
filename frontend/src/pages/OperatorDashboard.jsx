@@ -5,7 +5,7 @@ import { PackageCard } from '../components/PackageCard';
 import {
   Plus, LayoutGrid, List, ChevronDown, Check, X, ShieldAlert,
   Calendar, Users, DollarSign, Package, TrendingUp, Search, Eye, MapPin,
-  Clock, CheckCircle, AlertTriangle
+  Clock, CheckCircle, AlertTriangle, Edit3, Trash2, PlusCircle
 } from 'lucide-react';
 
 export const OperatorDashboard = () => {
@@ -32,10 +32,12 @@ export const OperatorDashboard = () => {
   const [bookingSearch, setBookingSearch] = useState('');
   const [bookingStatusFilter, setBookingStatusFilter] = useState('ALL');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingPackageId, setEditingPackageId] = useState(null);
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // New Package form state
+  // Package form state
   const [title, setTitle] = useState('');
   const [destinationId, setDestinationId] = useState('');
   const [durationDays, setDurationDays] = useState(3);
@@ -52,7 +54,7 @@ export const OperatorDashboard = () => {
   const [autoGenLoading, setAutoGenLoading] = useState(false);
   const [selectedBookingForModal, setSelectedBookingForModal] = useState(null);
 
-  // Dynamic Day-Wise Itinerary Plan for new package
+  // Dynamic Day-Wise Itinerary Plan for package
   const [itineraryDaysList, setItineraryDaysList] = useState([
     { dayNumber: 1, title: 'Arrival, Resort Check-in & Scenic Sunset', description: 'Station/Airport pickup transfer, resort check-in, orientation, and evening scenic stroll.' },
     { dayNumber: 2, title: 'Key Heritage & Nature Sightseeing Excursion', description: 'Full day excursion with private AC cab exploring top caves, viewpoints, and cultural spots.' },
@@ -81,6 +83,109 @@ export const OperatorDashboard = () => {
       console.error('Error fetching operator dashboard:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const resetPackageForm = () => {
+    setTitle('');
+    if (destinations.length > 0) setDestinationId(destinations[0].destinationId);
+    setDurationDays(3);
+    setDurationNights(2);
+    setBasePrice(3999);
+    setMaxTravellers(25);
+    setDescription('');
+    setIncludedServices('Resort Stay, Daily Breakfast & Dinner, AC Sightseeing Cab, Entry Passes');
+    setExcludedServices('Personal shopping, Airfare/Train tickets, Tips');
+    setImageUrl('https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800');
+    setStartDate('2026-12-01');
+    setEndDate('2026-12-04');
+    setItineraryDaysList([
+      { dayNumber: 1, title: 'Arrival, Resort Check-in & Scenic Sunset', description: 'Station/Airport pickup transfer, resort check-in, orientation, and evening scenic stroll.' },
+      { dayNumber: 2, title: 'Key Heritage & Nature Sightseeing Excursion', description: 'Full day excursion with private AC cab exploring top caves, viewpoints, and cultural spots.' },
+      { dayNumber: 3, title: 'Morning Nature Walk, Souvenir Shopping & Departure', description: 'Early morning sunrise view, local tribal market shopping, and departure transfer.' },
+    ]);
+    setIsEditMode(false);
+    setEditingPackageId(null);
+  };
+
+  const handleOpenCreateModal = (prefillDestId = null, prefillTitle = '') => {
+    resetPackageForm();
+    if (prefillDestId) setDestinationId(prefillDestId);
+    if (prefillTitle) setTitle(prefillTitle);
+    setIsAddModalOpen(true);
+  };
+
+  const handleOpenEditModal = (pkg) => {
+    setIsEditMode(true);
+    setEditingPackageId(pkg.packageId);
+    setTitle(pkg.title || '');
+    setDestinationId(pkg.destinationId || (destinations[0]?.destinationId || ''));
+    setDurationDays(pkg.durationDays || 3);
+    setDurationNights(pkg.durationNights || 2);
+    setBasePrice(pkg.basePricePerPerson || 3999);
+    setMaxTravellers(pkg.maxTravellers || 25);
+    setDescription(pkg.description || '');
+    setIncludedServices(pkg.includedServices || 'Resort Stay, Daily Breakfast & Dinner, AC Sightseeing Cab');
+    setExcludedServices(pkg.excludedServices || 'Personal expenses, Airfare/Train tickets');
+    setImageUrl(pkg.imageUrl || 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800');
+
+    if (pkg.departures && pkg.departures.length > 0) {
+      setStartDate(pkg.departures[0].startDate || '2026-12-01');
+      setEndDate(pkg.departures[0].endDate || '2026-12-04');
+    }
+
+    if (pkg.itineraryDays && pkg.itineraryDays.length > 0) {
+      setItineraryDaysList(pkg.itineraryDays.map((d, i) => ({
+        dayNumber: d.dayNumber || (i + 1),
+        title: d.title || `Day ${i + 1}`,
+        description: d.description || ''
+      })));
+    } else {
+      setItineraryDaysList([
+        { dayNumber: 1, title: 'Arrival & Welcome', description: 'Pickup and hotel check-in.' },
+        { dayNumber: 2, title: 'Main Sightseeing Tour', description: 'Explore key attractions.' }
+      ]);
+    }
+    setIsAddModalOpen(true);
+  };
+
+  const handleDeleteDay = (idx) => {
+    if (itineraryDaysList.length <= 1) {
+      alert('A tour package must have at least 1 day in the itinerary.');
+      return;
+    }
+    const updated = itineraryDaysList
+      .filter((_, i) => i !== idx)
+      .map((d, i) => ({ ...d, dayNumber: i + 1 }));
+    setItineraryDaysList(updated);
+    setDurationDays(updated.length);
+    setDurationNights(Math.max(0, updated.length - 1));
+  };
+
+  const handleAddDay = () => {
+    const nextNum = itineraryDaysList.length + 1;
+    const newDay = {
+      dayNumber: nextNum,
+      title: `Day ${nextNum}: Exploration & Activities`,
+      description: 'Visit local landmarks, cultural attractions, and enjoy scenic sightseeing.'
+    };
+    const updated = [...itineraryDaysList, newDay];
+    setItineraryDaysList(updated);
+    setDurationDays(updated.length);
+    setDurationNights(Math.max(0, updated.length - 1));
+  };
+
+  const handleDeletePackage = async (pkg) => {
+    if (!window.confirm(`Are you sure you want to delete the package "${pkg.title}"?\n\nThis will remove it from the tourist portal and operator listings.`)) {
+      return;
+    }
+    try {
+      await apiClient.delete(`/operator/packages/${pkg.packageId}`);
+      alert(`Package "${pkg.title}" has been deleted.`);
+      fetchData();
+    } catch (err) {
+      console.error('Delete package error:', err);
+      alert(err.message || 'Failed to delete package.');
     }
   };
 
@@ -123,44 +228,50 @@ export const OperatorDashboard = () => {
         }
       }
       setItineraryDaysList(generated);
-      alert(`✨ Generated ${numDays}-Day Itinerary Plan based on authentic attractions in ${targetName}!`);
+      alert(`✨ Generated ${numDays}-Day Itinerary Plan based on authentic attractions in ${targetName}! You can edit or delete any day.`);
     } catch (err) {
       console.error('Error auto-generating itinerary:', err);
-      alert('Could not auto-generate itinerary. You can still write or customize the days manually.');
+      alert('Could not auto-generate itinerary. You can still write, add, or customize days manually.');
     } finally {
       setAutoGenLoading(false);
     }
   };
 
-  const handleCreatePackage = async (e) => {
+  const handleSavePackage = async (e) => {
     e.preventDefault();
     setAddLoading(true);
+    const payload = {
+      destinationId: parseInt(destinationId),
+      title,
+      description,
+      durationDays: parseInt(durationDays),
+      durationNights: parseInt(durationNights),
+      basePricePerPerson: parseFloat(basePrice),
+      maxTravellers: parseInt(maxTravellers),
+      includedServices,
+      excludedServices,
+      imageUrl,
+      itineraryDays: itineraryDaysList,
+      departures: [
+        { startDate, endDate, totalSlots: parseInt(maxTravellers) },
+      ],
+    };
+
     try {
-      await apiClient.post('/operator/packages', {
-        destinationId: parseInt(destinationId),
-        title,
-        description,
-        durationDays: parseInt(durationDays),
-        durationNights: parseInt(durationNights),
-        basePricePerPerson: parseFloat(basePrice),
-        maxTravellers: parseInt(maxTravellers),
-        includedServices,
-        excludedServices,
-        imageUrl,
-        itineraryDays: itineraryDaysList,
-        departures: [
-          { startDate, endDate, totalSlots: parseInt(maxTravellers) },
-        ],
-      });
+      if (isEditMode && editingPackageId) {
+        await apiClient.put(`/operator/packages/${editingPackageId}`, payload);
+        alert('Package updated successfully! Changes have been saved.');
+      } else {
+        await apiClient.post('/operator/packages', payload);
+        alert('Package created successfully! It is now submitted to the Admin for approval.');
+      }
 
       setIsAddModalOpen(false);
-      setTitle('');
-      setDescription('');
+      resetPackageForm();
       fetchData();
-      alert('Package created successfully! It is now submitted to the Admin for approval.');
       navigate('/operator/packages');
     } catch (err) {
-      alert(err.message || 'Error creating package');
+      alert(err.message || 'Error saving package');
     } finally {
       setAddLoading(false);
     }
@@ -239,7 +350,7 @@ export const OperatorDashboard = () => {
           </button>
 
           <button
-            onClick={() => setIsAddModalOpen(true)}
+            onClick={() => handleOpenCreateModal()}
             className="btn-gotrips-add"
             style={{ marginLeft: '6px' }}
           >
@@ -331,7 +442,7 @@ export const OperatorDashboard = () => {
                       <th style={{ padding: '12px 16px' }}>Booked Customers</th>
                       <th style={{ padding: '12px 16px' }}>Money Earned</th>
                       <th style={{ padding: '12px 16px' }}>Status</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>Action</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -372,21 +483,65 @@ export const OperatorDashboard = () => {
                             </span>
                           </td>
                           <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                            <button
-                              onClick={() => setSelectedPackage(pkg)}
-                              style={{
-                                padding: '6px 14px',
-                                borderRadius: '8px',
-                                background: '#0284c7',
-                                color: '#ffffff',
-                                border: 'none',
-                                fontWeight: 700,
-                                fontSize: '12px',
-                                cursor: 'pointer',
-                              }}
-                            >
-                              View Customers ({pkgBookings.length})
-                            </button>
+                            <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
+                              <button
+                                onClick={() => setSelectedPackage(pkg)}
+                                style={{
+                                  padding: '6px 10px',
+                                  borderRadius: '8px',
+                                  background: '#0284c7',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  fontWeight: 700,
+                                  fontSize: '12px',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}
+                                title="View booked customers & passenger manifest"
+                              >
+                                <Users size={13} /> Customers ({pkgBookings.length})
+                              </button>
+                              <button
+                                onClick={() => handleOpenEditModal(pkg)}
+                                style={{
+                                  padding: '6px 10px',
+                                  borderRadius: '8px',
+                                  background: '#f8fafc',
+                                  color: '#0f172a',
+                                  border: '1px solid #cbd5e1',
+                                  fontWeight: 700,
+                                  fontSize: '12px',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}
+                                title="Edit package details & itinerary"
+                              >
+                                <Edit3 size={13} /> Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeletePackage(pkg)}
+                                style={{
+                                  padding: '6px 10px',
+                                  borderRadius: '8px',
+                                  background: '#fef2f2',
+                                  color: '#dc2626',
+                                  border: '1px solid #fecaca',
+                                  fontWeight: 700,
+                                  fontSize: '12px',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}
+                                title="Delete package"
+                              >
+                                <Trash2 size={13} /> Delete
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -540,7 +695,7 @@ export const OperatorDashboard = () => {
           ) : filteredPackages.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px', background: '#fff', borderRadius: '20px' }}>
               <p style={{ color: '#6b7280', marginBottom: '14px' }}>No packages found under this filter.</p>
-              <button onClick={() => setIsAddModalOpen(true)} className="btn-gotrips-add" style={{ margin: '0 auto' }}>
+              <button onClick={() => handleOpenCreateModal()} className="btn-gotrips-add" style={{ margin: '0 auto' }}>
                 <Plus size={16} /> Create Your First Package
               </button>
             </div>
@@ -552,6 +707,8 @@ export const OperatorDashboard = () => {
                   pkg={pkg}
                   isOperatorView
                   onSelect={(p) => setSelectedPackage(p)}
+                  onEdit={(p) => handleOpenEditModal(p)}
+                  onDelete={(p) => handleDeletePackage(p)}
                 />
               ))}
             </div>
@@ -603,11 +760,7 @@ export const OperatorDashboard = () => {
                   </div>
 
                   <button
-                    onClick={() => {
-                      setDestinationId(d.destinationId);
-                      setTitle(`${d.name} Special Tour Package`);
-                      setIsAddModalOpen(true);
-                    }}
+                    onClick={() => handleOpenCreateModal(d.destinationId, `${d.name} Special Tour Package`)}
                     style={{
                       width: '100%',
                       padding: '10px',
@@ -741,19 +894,25 @@ export const OperatorDashboard = () => {
         </div>
       )}
 
-      {/* Add New Package Modal */}
+      {/* Add / Edit Package Modal */}
       {isAddModalOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(17, 24, 39, 0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-          <div style={{ background: '#ffffff', borderRadius: '24px', maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '32px' }}>
+          <div style={{ background: '#ffffff', borderRadius: '24px', maxWidth: '680px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '32px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div>
-                <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#111827' }}>Create New Travel Package</h2>
-                <p style={{ fontSize: '12px', color: '#64748b' }}>New packages will be submitted to the Admin for approval before going live to tourists</p>
+                <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#111827' }}>
+                  {isEditMode ? 'Edit Tour Package' : 'Create New Travel Package'}
+                </h2>
+                <p style={{ fontSize: '12px', color: '#64748b' }}>
+                  {isEditMode
+                    ? 'Update package parameters, pricing, dates, and day-wise itinerary plan'
+                    : 'New packages will be submitted to the Admin for approval before going live to tourists'}
+                </p>
               </div>
               <button onClick={() => setIsAddModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280' }}><X size={20} /></button>
             </div>
 
-            <form onSubmit={handleCreatePackage} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <form onSubmit={handleSavePackage} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#4b5563', textTransform: 'uppercase', marginBottom: '4px' }}>Package Title</label>
                 <input type="text" placeholder="e.g. Scottish Highlands Adventure" value={title} onChange={(e) => setTitle(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #d1d5db', fontSize: '14px' }} required />
@@ -775,7 +934,18 @@ export const OperatorDashboard = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#4b5563', textTransform: 'uppercase', marginBottom: '4px' }}>Duration Days</label>
-                  <input type="number" min="1" value={durationDays} onChange={(e) => setDurationDays(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #d1d5db' }} required />
+                  <input
+                    type="number"
+                    min="1"
+                    value={durationDays}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 1;
+                      setDurationDays(val);
+                      setDurationNights(Math.max(0, val - 1));
+                    }}
+                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #d1d5db' }}
+                    required
+                  />
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#4b5563', textTransform: 'uppercase', marginBottom: '4px' }}>Nights</label>
@@ -787,56 +957,84 @@ export const OperatorDashboard = () => {
                 </div>
               </div>
 
-              {/* Automatic Itinerary Generator */}
+              {/* Day-Wise Itinerary Plan with Add, Edit, and Delete options */}
               <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>
                       Day-Wise Itinerary Plan ({itineraryDaysList.length} Days)
                     </label>
                     <span style={{ fontSize: '11.5px', color: '#64748b' }}>
-                      Auto-generate itinerary from authentic tourist spots or customize days
+                      Add, edit titles & descriptions, or delete days directly from the itinerary
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleAutoGenerateItinerary}
-                    disabled={autoGenLoading}
-                    style={{
-                      padding: '6px 12px', background: '#0284c7', color: '#fff', border: 'none',
-                      borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', gap: '4px'
-                    }}
-                  >
-                    {autoGenLoading ? 'Generating...' : '✨ Auto-Generate Itinerary'}
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={handleAddDay}
+                      style={{
+                        padding: '6px 12px', background: '#f1f5f9', color: '#0f172a', border: '1px solid #cbd5e1',
+                        borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: '4px'
+                      }}
+                      title="Add a new day to this itinerary"
+                    >
+                      <Plus size={14} /> Add Day
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleAutoGenerateItinerary}
+                      disabled={autoGenLoading}
+                      style={{
+                        padding: '6px 12px', background: '#0284c7', color: '#fff', border: 'none',
+                        borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: '4px'
+                      }}
+                    >
+                      {autoGenLoading ? 'Generating...' : '✨ Auto-Generate'}
+                    </button>
+                  </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '240px', overflowY: 'auto', paddingRight: '4px' }}>
                   {itineraryDaysList.map((day, idx) => (
-                    <div key={idx} style={{ background: '#ffffff', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12.5px' }}>
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '4px' }}>
-                        <span style={{ fontWeight: 800, color: '#0284c7' }}>Day {day.dayNumber}:</span>
+                    <div key={idx} style={{ background: '#ffffff', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '12.5px' }}>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
+                        <span style={{ fontWeight: 800, color: '#0284c7', minWidth: '45px' }}>Day {day.dayNumber}:</span>
                         <input
                           type="text"
+                          placeholder="Day Title (e.g. Borra Caves & Coffee Plantation Visit)"
                           value={day.title}
                           onChange={(e) => {
                             const updated = [...itineraryDaysList];
                             updated[idx].title = e.target.value;
                             setItineraryDaysList(updated);
                           }}
-                          style={{ flex: 1, padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '12.5px', fontWeight: 700 }}
+                          style={{ flex: 1, minWidth: 0, padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12.5px', fontWeight: 700 }}
                         />
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteDay(idx)}
+                          style={{
+                            padding: '6px 10px', borderRadius: '6px', background: '#fef2f2',
+                            color: '#dc2626', border: '1px solid #fecaca', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, flexShrink: 0
+                          }}
+                          title="Delete this day from itinerary"
+                        >
+                          <Trash2 size={13} /> Delete Day
+                        </button>
                       </div>
                       <textarea
                         rows={2}
+                        placeholder="Detailed itinerary description, morning/evening activities, transport halt..."
                         value={day.description}
                         onChange={(e) => {
                           const updated = [...itineraryDaysList];
                           updated[idx].description = e.target.value;
                           setItineraryDaysList(updated);
                         }}
-                        style={{ width: '100%', padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '12px' }}
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', resize: 'vertical' }}
                       />
                     </div>
                   ))}
@@ -846,6 +1044,17 @@ export const OperatorDashboard = () => {
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#4b5563', textTransform: 'uppercase', marginBottom: '4px' }}>Description</label>
                 <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Overview of the tour itinerary..." style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #d1d5db', fontSize: '13.5px' }} required />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#4b5563', textTransform: 'uppercase', marginBottom: '4px' }}>Included Services</label>
+                  <input type="text" value={includedServices} onChange={(e) => setIncludedServices(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #d1d5db', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#4b5563', textTransform: 'uppercase', marginBottom: '4px' }}>Excluded Services</label>
+                  <input type="text" value={excludedServices} onChange={(e) => setExcludedServices(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #d1d5db', fontSize: '13px' }} />
+                </div>
               </div>
 
               <div>
@@ -867,7 +1076,9 @@ export const OperatorDashboard = () => {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '14px' }}>
                 <button type="button" onClick={() => setIsAddModalOpen(false)} className="btn-link">Cancel</button>
                 <button type="submit" disabled={addLoading} className="btn-primary-orange">
-                  {addLoading ? 'Submitting...' : 'Submit Package for Approval'}
+                  {addLoading
+                    ? (isEditMode ? 'Saving Changes...' : 'Submitting...')
+                    : (isEditMode ? 'Save Package Changes' : 'Submit Package for Approval')}
                 </button>
               </div>
             </form>

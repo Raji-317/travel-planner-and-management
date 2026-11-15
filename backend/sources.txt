@@ -7,6 +7,7 @@ C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\controller\Booking
 C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\controller\DestinationController.java
 C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\controller\PackageController.java
 C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\controller\PlannerController.java
+C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\controller\WishlistController.java
 C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\exception\AppException.java
 C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\exception\ValidationException.java
 C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\model\Attraction.java
@@ -30,6 +31,7 @@ C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\model\TourExpense.
 C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\model\TrainSchedule.java
 C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\model\TransitLeg.java
 C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\model\User.java
+C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\model\WishlistItem.java
 C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\planner\AttractionGraph.java
 C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\planner\AttractionNode.java
 C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\planner\BudgetEstimator.java
@@ -43,6 +45,7 @@ C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\repository\Package
 C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\repository\PlannerRepository.java
 C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\repository\ReviewRepository.java
 C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\repository\UserRepository.java
+C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\repository\WishlistRepository.java
 C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\security\AuthFilter.java
 C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\security\PasswordHasher.java
 C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\security\TokenService.java

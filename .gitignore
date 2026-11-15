@@ -1,0 +1,25 @@
+# Compiled Java class files
+backend/out/
+*.class
+
+# Node / Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+dist/
+
+# Logs and environment
+*.log
+.env
+.env.local
+.env.*.local
+db.properties
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Keep JAR dependencies in backend/lib
+!backend/lib/*.jar
