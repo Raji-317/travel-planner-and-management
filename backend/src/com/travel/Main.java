@@ -35,9 +35,10 @@ public class Main {
             // Verify database connection at startup
             boolean dbConnected = DatabaseConfig.testConnection();
             if (dbConnected) {
-                System.out.println("[DB-INIT] Successfully connected to MySQL database: travel_planner_db");
+                System.out.println("[DB-INIT] Successfully connected to MySQL database.");
+                com.travel.config.DatabaseInitializer.initDatabase();
             } else {
-                System.out.println("[DB-INIT] Warning: Could not reach MySQL. Ensure MySQL is running on port 3306 and schema is loaded.");
+                System.out.println("[DB-INIT] Warning: Could not reach MySQL. Ensure MySQL is running and accessible.");
             }
 
         } catch (IOException e) {
@@ -75,6 +76,20 @@ public class Main {
 
         // Admin Endpoints: /api/admin/dashboard, /api/admin/operators, /api/admin/users
         server.createContext("/api/admin", new com.travel.controller.AdminController());
+
+        // GET /api/setup - Safe one-click schema setup & seed
+        server.createContext("/api/setup", exchange -> {
+            if (HttpUtils.handlePreflight(exchange)) return;
+            try {
+                com.travel.config.DatabaseInitializer.initDatabase();
+                Map<String, Object> resp = new LinkedHashMap<>();
+                resp.put("success", true);
+                resp.put("message", "Database tables and demo seed accounts initialized successfully!");
+                HttpUtils.sendSuccess(exchange, resp);
+            } catch (Exception e) {
+                HttpUtils.sendError(exchange, 500, "Setup failed: " + e.getMessage());
+            }
+        });
 
         // GET /api/health - System and Database Health Check
         server.createContext("/api/health", exchange -> {

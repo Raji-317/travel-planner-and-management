@@ -1,5 +1,6 @@
 C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\Main.java
 C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\config\DatabaseConfig.java
+C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\config\DatabaseInitializer.java
 C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\config\ServerConfig.java
 C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\controller\AdminController.java
 C:\Users\rajya\OneDrive\Desktop\travel\backend\src\com\travel\controller\AuthController.java
