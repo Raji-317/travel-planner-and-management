@@ -1,4 +1,22 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+const rawBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+
+const normalizeApiUrl = (url) => {
+  if (!url) return 'http://localhost:8080/api';
+  let cleaned = url.trim();
+  // Ensure protocol
+  if (!cleaned.startsWith('http://') && !cleaned.startsWith('https://')) {
+    cleaned = `https://${cleaned}`;
+  }
+  // Remove trailing slashes
+  cleaned = cleaned.replace(/\/+$/, '');
+  // Ensure /api suffix
+  if (!cleaned.endsWith('/api')) {
+    cleaned = `${cleaned}/api`;
+  }
+  return cleaned;
+};
+
+const API_BASE_URL = normalizeApiUrl(rawBase);
 
 export const apiClient = {
   getToken() {
